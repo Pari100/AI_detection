@@ -1,38 +1,63 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
 
-// modify the interface with any CRUD methods
-// you might need
+import { db } from "./db";
+import { apiKeys, requestLogs, type ApiKey, type InsertApiKey, type RequestLog, type InsertRequestLog } from "@shared/schema";
+import { eq, desc, count, sql } from "drizzle-orm";
+import { randomBytes } from "crypto";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // API Keys
+  getApiKey(key: string): Promise<ApiKey | undefined>;
+  createApiKey(owner: string): Promise<ApiKey>;
+  
+  // Logs
+  logRequest(log: InsertRequestLog): Promise<RequestLog>;
+  getRecentLogs(limit?: number): Promise<RequestLog[]>;
+  getStats(): Promise<{
+    totalRequests: number;
+    aiDetected: number;
+    humanDetected: number;
+  }>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async getApiKey(key: string): Promise<ApiKey | undefined> {
+    const [apiKey] = await db.select().from(apiKeys).where(eq(apiKeys.key, key));
+    return apiKey;
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async createApiKey(owner: string): Promise<ApiKey> {
+    const key = "sk_" + randomBytes(16).toString("hex");
+    const [apiKey] = await db.insert(apiKeys).values({
+      key,
+      owner,
+      isActive: true,
+    }).returning();
+    return apiKey;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async logRequest(log: InsertRequestLog): Promise<RequestLog> {
+    const [entry] = await db.insert(requestLogs).values(log).returning();
+    return entry;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async getRecentLogs(limit: number = 50): Promise<RequestLog[]> {
+    return db.select()
+      .from(requestLogs)
+      .orderBy(desc(requestLogs.timestamp))
+      .limit(limit);
+  }
+
+  async getStats() {
+    const [total] = await db.select({ count: count() }).from(requestLogs);
+    const [ai] = await db.select({ count: count() }).from(requestLogs).where(eq(requestLogs.classification, "AI_GENERATED"));
+    const [human] = await db.select({ count: count() }).from(requestLogs).where(eq(requestLogs.classification, "HUMAN"));
+    
+    return {
+      totalRequests: Number(total?.count || 0),
+      aiDetected: Number(ai?.count || 0),
+      humanDetected: Number(human?.count || 0),
+    };
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
