@@ -1,4 +1,5 @@
-import express, { type Express, type Request, type Response, type NextFunction } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
+import express from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer, type Server as HttpServer } from "http";
