@@ -14,7 +14,7 @@ export default function History() {
   const { toast } = useToast();
 
   // Get only first 5 logs that haven't been deleted
-  const displayLogs = stats?.recentLogs?.filter(log => !deletedIds.includes(log.id)).slice(0, 5) || [];
+  const displayLogs = stats?.recentLogs?.filter((log: any) => !deletedIds.includes(log.id)).slice(0, 5) || [];
 
   const handleDeleteLog = (logId: number) => {
     setDeletedIds([...deletedIds, logId]);
