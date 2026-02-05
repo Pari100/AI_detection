@@ -1,7 +1,7 @@
 {
+  "type": "module",
   "name": "rest-express",
   "version": "1.0.0",
-  "type": "module",
   "license": "MIT",
   "scripts": {
     "dev": "cross-env NODE_ENV=development tsx server/index.ts",
@@ -88,6 +88,7 @@
     "zod-validation-error": "^3.5.4"
   },
   "devDependencies": {
+    "@babel/preset-typescript": "^7.28.5",
     "@replit/vite-plugin-cartographer": "^0.4.4",
     "@replit/vite-plugin-dev-banner": "^0.1.1",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
